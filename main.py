@@ -5,6 +5,8 @@ from pydantic import BaseModel
 import requests  # for calling Gemini API or similar
 from func import s
 from Comparison import kmer_similarity  # Import the comparison function
+from globals import data_store
+
 # Initialize FastAPI app
 app = FastAPI()
 
