@@ -34,14 +34,12 @@ async def upload_csv(csv_file: UploadFile = File(...)):
 async def generate_sequence(sample_id: str):
     # global df_global  # Use the global variable
     df = data_store.get("df")
-    # Check if the  DataFrame is None 
-    # if df_global is None:
-      if df is None:
+    if df is None:
         raise HTTPException(status_code=400, detail="No data available. Please upload CSV first.")
     
     # Check if the sample_id exists in the DataFrame
-    # row = df_global[df_global["id"] == sample_id]
-     row = df[df["id"] == sample_id]
+    row = df[df["id"] == sample_id]
+
     if row.empty:
         raise HTTPException(status_code=404, detail=f"Sample ID {sample_id} not found")
     
