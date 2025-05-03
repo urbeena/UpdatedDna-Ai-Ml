@@ -11,18 +11,16 @@ from globals import data_store
 app = FastAPI()
 
 # Global variable to store uploaded data
-df_global = None  # Initialize df_global here
 
 @app.post('/upload-csv/')
 async def upload_csv(csv_file: UploadFile = File(...)):
-    global df_global  # Use the global variable
     
     # Read the contents of the uploaded file in memory
     contents = await csv_file.read()
     
     # Decode bytes to string and then use StringIO to simulate a file object
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
-    df_global = df  # Store the DataFrame in the global variable
+    data_store["df"] = df  # Store the DataFrame in the global variable
 
     # Process the dataframe (just showing columns here as an example)
     return {"filename": csv_file.filename, "columns": df.columns.tolist()}
