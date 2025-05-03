@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from func import s
-from globals import data_store  # Import the shared dict
+from globals import data_store
 
 router = APIRouter()
 

@@ -5,11 +5,12 @@ from pydantic import BaseModel
 import requests  # for calling Gemini API or similar
 from func import s
 from Comparison import kmer_similarity  # Import the comparison function
+from globals import data_store
+
 # Initialize FastAPI app
 app = FastAPI()
 
 # Global variable to store uploaded data
-df_global = None  # Initialize df_global here
 
 @app.post('/upload-csv/')
 async def upload_csv(csv_file: UploadFile = File(...)):
@@ -20,7 +21,7 @@ async def upload_csv(csv_file: UploadFile = File(...)):
     
     # Decode bytes to string and then use StringIO to simulate a file object
     df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
-    df_global = df  # Store the DataFrame in the global variable
+    data_store["df"] = df # Store the DataFrame in the global variable
 
     # Process the dataframe (just showing columns here as an example)
     return {"filename": csv_file.filename, "columns": df.columns.tolist()}
@@ -31,15 +32,16 @@ async def upload_csv(csv_file: UploadFile = File(...)):
 #step2: generate sequence
 @app.get("/generate-sequence/{sample_id}")
 async def generate_sequence(sample_id: str):
-    global df_global  # Use the global variable
-
+    # global df_global  # Use the global variable
+    df = data_store.get("df")
     # Check if the  DataFrame is None 
-    if df_global is None:
+    # if df_global is None:
+      if df is None:
         raise HTTPException(status_code=400, detail="No data available. Please upload CSV first.")
     
     # Check if the sample_id exists in the DataFrame
-    row = df_global[df_global["id"] == sample_id]
-
+    # row = df_global[df_global["id"] == sample_id]
+     row = df[df["id"] == sample_id]
     if row.empty:
         raise HTTPException(status_code=404, detail=f"Sample ID {sample_id} not found")
     
@@ -63,15 +65,19 @@ async def generate_sequence(sample_id: str):
 
 @app.get("/compare-samples/{id1}/{id2}")
 async def compare_samples(id1: str, id2: str):
-    global df_global
+    # global df_global
 
     # Check if CSV data is uploaded
-    if df_global is None:
+    # if df_global is None:
+     df = data_store.get("df")
+    if df is None:
         raise HTTPException(status_code=400, detail="No data uploaded. Please upload the CSV first.")
 
     # Get rows for both IDs
-    row1 = df_global[df_global["id"] == id1]
-    row2 = df_global[df_global["id"] == id2]
+    # row1 = df_global[df_global["id"] == id1]
+    # row2 = df_global[df_global["id"] == id2]
+    row1 = df[df["id"] == id1]
+    row2 = df[df["id"] == id2]
 
     if row1.empty or row2.empty:
         raise HTTPException(status_code=404, detail="One or both sample IDs not found.")
