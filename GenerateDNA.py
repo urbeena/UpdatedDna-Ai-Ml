@@ -11,7 +11,9 @@ def generate_sequence(sample_id: str):
     if df is None:
         raise HTTPException(status_code=400, detail="No data available. Please upload CSV first.")
     
-    print(f"Data in df_global: {df['df'].head()}") 
+    # print(f"Data in df_global: {df['df'].head()}") 
+    print(f"Data in df_global: {df.head()}")
+
 
     row = df[df["id"] == sample_id]
 
