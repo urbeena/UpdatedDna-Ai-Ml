@@ -138,66 +138,71 @@
 
 
 import io
+import os
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import pandas as pd
 from pydantic import BaseModel
-import requests
+import requests  # For calling Gemini API
 from func import s
 from Comparison import kmer_similarity
+
+# Constants
+CSV_FILE_PATH = "data.csv"
 
 # Initialize FastAPI app
 app = FastAPI()
 
-CSV_FILE_PATH = "data.csv"  # Persistent CSV location
+
+# Helper function to load the CSV
+def load_csv():
+    if not os.path.exists(CSV_FILE_PATH):
+        return None
+    return pd.read_csv(CSV_FILE_PATH)
 
 
-# Step 1: Upload CSV and save to file
-@app.post('/upload-csv/')
+#################################
+# Upload CSV
+@app.post("/upload-csv/")
 async def upload_csv(csv_file: UploadFile = File(...)):
-    try:
-        contents = await csv_file.read()
-        with open(CSV_FILE_PATH, "wb") as f:
-            f.write(contents)
-        df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
-        return {"filename": csv_file.filename, "columns": df.columns.tolist()}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"CSV processing failed: {str(e)}")
+    contents = await csv_file.read()
+    decoded = contents.decode("utf-8")
+
+    # Save file persistently
+    with open(CSV_FILE_PATH, "w", encoding="utf-8") as f:
+        f.write(decoded)
+
+    df = pd.read_csv(io.StringIO(decoded))
+    return {"filename": csv_file.filename, "columns": df.columns.tolist()}
 
 
-# Step 2: Generate sequence from stored CSV
+#################################
+# Generate DNA sequence for sample ID
 @app.get("/generate-sequence/{sample_id}")
 async def generate_sequence(sample_id: str):
-    try:
-        df = pd.read_csv(CSV_FILE_PATH)
-    except FileNotFoundError:
-        raise HTTPException(status_code=400, detail="No data available. Please upload CSV first.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"CSV loading failed: {str(e)}")
+    df = load_csv()
+    if df is None:
+        raise HTTPException(status_code=400, detail="CSV not found. Please upload it first.")
 
     row = df[df["id"] == sample_id]
     if row.empty:
-        raise HTTPException(status_code=404, detail=f"Sample ID {sample_id} not found")
+        raise HTTPException(status_code=404, detail=f"Sample ID {sample_id} not found.")
 
-    try:
-        id = row.iloc[0]["id"]
-        region = row.iloc[0]["region"]
-        age = row.iloc[0]["age"]
-        seed = row.iloc[0]["seed"]
-        sequence = s(id, region, age, seed)
-        return {"sample_id": sample_id, "sequence": sequence[:500]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sequence generation failed: {str(e)}")
+    id = row.iloc[0]["id"]
+    region = row.iloc[0]["region"]
+    age = row.iloc[0]["age"]
+    seed = row.iloc[0]["seed"]
+
+    sequence = s(id, region, age, seed)
+    return {"sample_id": sample_id, "sequence": sequence[:500]}  # Limit response
 
 
-# Step 3: Compare sequences of two samples
+#################################
+# Compare 2 samples
 @app.get("/compare-samples/{id1}/{id2}")
 async def compare_samples(id1: str, id2: str):
-    try:
-        df = pd.read_csv(CSV_FILE_PATH)
-    except FileNotFoundError:
-        raise HTTPException(status_code=400, detail="No data uploaded. Please upload the CSV first.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"CSV loading failed: {str(e)}")
+    df = load_csv()
+    if df is None:
+        raise HTTPException(status_code=400, detail="CSV not found. Please upload it first.")
 
     row1 = df[df["id"] == id1]
     row2 = df[df["id"] == id2]
@@ -205,16 +210,20 @@ async def compare_samples(id1: str, id2: str):
     if row1.empty or row2.empty:
         raise HTTPException(status_code=404, detail="One or both sample IDs not found.")
 
-    try:
-        seq1 = s(row1.iloc[0]["id"], row1.iloc[0]["region"], row1.iloc[0]["age"], row1.iloc[0]["seed"])
-        seq2 = s(row2.iloc[0]["id"], row2.iloc[0]["region"], row2.iloc[0]["age"], row2.iloc[0]["seed"])
-        result = kmer_similarity(seq1, seq2)
-        return {"sample_id_1": id1, "sample_id_2": id2, "comparison_result": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
+    seq1 = s(row1.iloc[0]["id"], row1.iloc[0]["region"], row1.iloc[0]["age"], row1.iloc[0]["seed"])
+    seq2 = s(row2.iloc[0]["id"], row2.iloc[0]["region"], row2.iloc[0]["age"], row2.iloc[0]["seed"])
+
+    result = kmer_similarity(seq1, seq2)
+
+    return {
+        "sample_id_1": id1,
+        "sample_id_2": id2,
+        "comparison_result": result
+    }
 
 
-# Step 4: Ask Gemini AI a question
+#################################
+# Ask Gemini endpoint
 API_KEY = "AIzaSyDxnUoQ49akvccSZtZuml7mH7Zt8Ug7dHk"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
 
@@ -223,7 +232,10 @@ class Question(BaseModel):
 
 @app.post("/ask")
 def ask_gemini(question: Question):
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json"
+    }
+
     data = {
         "contents": [
             {
@@ -239,12 +251,11 @@ def ask_gemini(question: Question):
     try:
         response = requests.post(GEMINI_URL, headers=headers, json=data)
         response.raise_for_status()
+
         gemini_response = response.json()
-        return {
-            "answer": gemini_response['candidates'][0]['content']['parts'][0]['text']
-        }
+        answer = gemini_response['candidates'][0]['content']['parts'][0]['text']
+        return {"answer": answer}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini API call failed: {str(e)}")
-
-
-
+        print("Gemini API Error:", str(e))
+        raise HTTPException(status_code=500, detail="Failed to get response from Gemini.")
