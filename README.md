@@ -6,7 +6,7 @@ It supports uploading sample data, generating DNA sequences from it, comparing s
 
 ---
 
-## ✅ Features
+## Features
 
 - Upload sample data (CSV format)
 - Generate synthetic DNA sequences using attributes
@@ -17,7 +17,7 @@ It supports uploading sample data, generating DNA sequences from it, comparing s
 
 ---
 
-## 🚀 Steps to Use
+##  Steps to Use
 
 ### 1️⃣ Upload CSV
 
@@ -96,39 +96,42 @@ json{
   "answer": "The DNA sequence is generated using the region, age, and seed of the sample..."
 }
 
-🛠️ Local Setup
-1. Clone the Repo
-bash
-git clone https://github.com/yourusername/dna-analysis-api.git
-cd dna-analysis-api
+Local Setup
+Clone the Repository:
+git clone https://github.com/urbeena/UpdatedDna-Ai-Ml.git
+cd UpdatedDna-Ai-Ml
 
-2.Install Requirements
-bash
+Install Dependencies:
 pip install -r requirements.txt
 
-3. Run the App
-bash
-Copy
-Edit
+Run the Application Locally:
 uvicorn main:app --reload
 
-4. Open Swagger UI
-Go to: http://127.0.0.1:8000/docs
+Access the API at:
+http://127.0.0.1:8000/docs
+
 
 **🌍 Deployment
 Deployed on Render**
 
 Live API URL:
-https://your-app-name.onrender.com
+https://updateddna-ai-ml.onrender.com
 
 Swagger Docs:
-https://your-app-name.onrender.com/docs
+https://updateddna-ai-ml.onrender.com/docs
+NOTE:
+The deployed APIs are accessible and working, but there are issues with Step 2 and Step 3
+so you can test locally
+
+
 
 ****📦 Tech Stack**
 Python with FastAPI
 Pandas for data manipulation
 Gemini AI API integration
 Render for deployment**
+
+
 
 #############OPTIONAL
  **How DNA Similarity is Calculated**********
